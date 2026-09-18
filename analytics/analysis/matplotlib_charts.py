@@ -21,17 +21,28 @@ CHART_PURPLE = "#7C3AED"
 def _fig_to_html(fig) -> str:
     """Convert a Matplotlib figure to an inline HTML image."""
     buffer = io.BytesIO()
-    fig.savefig(buffer, format="png", dpi=100, bbox_inches="tight")
-    buffer.seek(0)
-    image_base64 = base64.b64encode(buffer.read()).decode("utf-8")
-    plt.close(fig)
-    return (
-        '<img src="data:image/png;base64,'
-        f'{image_base64}" style="width:100%;height:auto;border-radius:12px;" />'
-    )
+    try:
+        fig.savefig(
+            buffer,
+            format="png",
+            dpi=80,
+            bbox_inches="tight",
+            pil_kwargs={"optimize": True},
+        )
+        image_base64 = base64.b64encode(buffer.getvalue()).decode("utf-8")
+        return (
+            '<img src="data:image/png;base64,'
+            f'{image_base64}" style="width:100%;height:auto;border-radius:12px;" />'
+        )
+    finally:
+        buffer.close()
+        plt.close(fig)
 
 
 def _prepare_chart_df(df: pd.DataFrame) -> pd.DataFrame:
+    if "Month" in df.columns:
+        return df
+
     chart_df = df.copy()
     if "order_date" not in chart_df.columns and "Order Date" in chart_df.columns:
         chart_df["order_date"] = pd.to_datetime(chart_df["Order Date"])
@@ -40,6 +51,8 @@ def _prepare_chart_df(df: pd.DataFrame) -> pd.DataFrame:
 
     if "Order Date" not in chart_df.columns:
         chart_df["Order Date"] = chart_df["order_date"]
+
+    chart_df["Month"] = chart_df["order_date"].dt.to_period("M").astype(str)
 
     return chart_df
 

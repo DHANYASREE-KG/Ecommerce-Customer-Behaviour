@@ -19,9 +19,9 @@ class Order(models.Model):
     order_date = models.DateField()
     ship_date = models.DateField()
     ship_mode = models.CharField(max_length=50)
-    state = models.CharField(max_length=50)
+    state = models.CharField(max_length=50, db_index=True)
     region = models.CharField(max_length=50)
-    category = models.CharField(max_length=50)
+    category = models.CharField(max_length=50, db_index=True)
     sub_category = models.CharField(max_length=50)
     sales = models.FloatField()
     quantity = models.IntegerField()
@@ -48,7 +48,7 @@ class RfmSegment(models.Model):
     f_score = models.IntegerField()
     m_score = models.IntegerField()
     rfm_score = models.IntegerField()
-    segment = models.CharField(max_length=50)
+    segment = models.CharField(max_length=50, db_index=True)
 
     class Meta:
         ordering = ['-monetary']

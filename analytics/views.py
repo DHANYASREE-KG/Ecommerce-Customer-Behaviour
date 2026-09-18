@@ -1,6 +1,8 @@
 import logging
+import hashlib
 
 import pandas as pd
+from django.core.cache import cache
 from django.shortcuts import render
 
 from .analysis.matplotlib_charts import (
@@ -18,6 +20,8 @@ from .models import Customer, Order, RfmSegment
 
 logger = logging.getLogger(__name__)
 
+CACHE_TIMEOUT = 300
+
 
 def _safe_chart(builder, *args, **kwargs):
     try:
@@ -33,11 +37,12 @@ def _prepare_data(state=None, category=None, segment=None):
         filters["state"] = state
     if category:
         filters["category"] = category
+    if segment:
+        filters["customer__rfm__segment"] = segment
 
-    orders = Order.objects.select_related("customer").filter(**filters).values(
+    orders = Order.objects.filter(**filters).order_by().values(
         "order_id",
         "order_date",
-        "ship_date",
         "category",
         "sub_category",
         "state",
@@ -46,7 +51,7 @@ def _prepare_data(state=None, category=None, segment=None):
         "profit",
         "discount",
         "quantity",
-        "customer__customer_id",
+        "customer_id",
     )
     df = pd.DataFrame(list(orders))
 
@@ -54,7 +59,6 @@ def _prepare_data(state=None, category=None, segment=None):
         return df, pd.DataFrame()
 
     df["order_date"] = pd.to_datetime(df["order_date"])
-    df["ship_date"] = pd.to_datetime(df["ship_date"])
     df.rename(
         columns={
             "category": "Category",
@@ -66,15 +70,17 @@ def _prepare_data(state=None, category=None, segment=None):
             "discount": "Discount",
             "quantity": "Quantity",
             "order_id": "Order ID",
-            "customer__customer_id": "Customer ID",
+            "customer_id": "Customer ID",
         },
         inplace=True,
     )
-    df["Order Date"] = df["order_date"]
     df["Month"] = df["order_date"].dt.to_period("M").astype(str)
 
-    rfm_qs = RfmSegment.objects.all().values(
-        "customer__customer_id",
+    rfm_filters = {"customer_id__in": orders.values("customer_id")}
+    if segment:
+        rfm_filters["segment"] = segment
+    rfm_qs = RfmSegment.objects.filter(**rfm_filters).order_by().values(
+        "customer_id",
         "recency",
         "frequency",
         "monetary",
@@ -89,7 +95,7 @@ def _prepare_data(state=None, category=None, segment=None):
     if not rfm.empty:
         rfm.rename(
             columns={
-                "customer__customer_id": "Customer ID",
+                "customer_id": "Customer ID",
                 "segment": "Segment",
                 "recency": "Recency",
                 "frequency": "Frequency",
@@ -102,34 +108,58 @@ def _prepare_data(state=None, category=None, segment=None):
             inplace=True,
         )
 
-    if segment:
-        if rfm.empty:
-            return df.iloc[0:0], rfm
-        rfm = rfm[rfm["Segment"] == segment].copy()
-        customer_ids = rfm["Customer ID"].tolist()
-        if not customer_ids:
-            return df.iloc[0:0], rfm
-        df = df[df["Customer ID"].isin(customer_ids)].copy()
-
-    if not rfm.empty:
-        rfm = rfm[rfm["Customer ID"].isin(df["Customer ID"].unique())].copy()
-
     return df, rfm
 
 
+def _filter_options():
+    options = cache.get("dashboard:filter-options:v1")
+    if options is None:
+        options = {
+            "states": list(
+                Order.objects.order_by("state")
+                .values_list("state", flat=True)
+                .distinct()
+            ),
+            "categories": list(
+                Order.objects.order_by("category")
+                .values_list("category", flat=True)
+                .distinct()
+            ),
+            "segments": list(
+                RfmSegment.objects.order_by("segment")
+                .values_list("segment", flat=True)
+                .distinct()
+            ),
+        }
+        cache.set("dashboard:filter-options:v1", options, CACHE_TIMEOUT)
+    return options
+
+
+def _dashboard_cache_key(state, category, segment):
+    filter_values = "\x1f".join(value or "" for value in (state, category, segment))
+    digest = hashlib.sha256(filter_values.encode("utf-8")).hexdigest()
+    return f"dashboard:context:v2:{digest}"
+
+
 def _dashboard_context(request, state=None, category=None, segment=None):
+    cache_key = _dashboard_cache_key(state, category, segment)
+    cached_context = cache.get(cache_key)
+    if cached_context is not None:
+        return cached_context
+
     df, rfm = _prepare_data(state=state, category=category, segment=segment)
+    options = _filter_options()
 
     if df.empty:
-        return {
+        context = {
             "error": "No data matches the selected filters. Try another option.",
             "selected_state": state or "",
             "selected_category": category or "",
             "selected_segment": segment or "",
-            "states": list(Order.objects.order_by("state").values_list("state", flat=True).distinct()),
-            "categories": list(Order.objects.order_by("category").values_list("category", flat=True).distinct()),
-            "segments": list(RfmSegment.objects.order_by("segment").values_list("segment", flat=True).distinct()),
+            **options,
         }
+        cache.set(cache_key, context, CACHE_TIMEOUT)
+        return context
 
     total_sales = float(df["Sales"].sum())
     total_profit = float(df["Profit"].sum())
@@ -155,10 +185,9 @@ def _dashboard_context(request, state=None, category=None, segment=None):
         "selected_state": state or "",
         "selected_category": category or "",
         "selected_segment": segment or "",
-        "states": list(Order.objects.order_by("state").values_list("state", flat=True).distinct()),
-        "categories": list(Order.objects.order_by("category").values_list("category", flat=True).distinct()),
-        "segments": list(RfmSegment.objects.order_by("segment").values_list("segment", flat=True).distinct()),
+        **options,
     }
+    cache.set(cache_key, context, CACHE_TIMEOUT)
     return context
 
 
