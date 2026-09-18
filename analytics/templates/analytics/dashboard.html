@@ -1,197 +1,182 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>E-Commerce Sales Intelligence Dashboard</title>
-  {% load static %}
-  <script src="{% static 'analytics/plotly.min.js' %}"></script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>E-Commerce Customer Behavior Analyzer</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
   <style>
-    *{box-sizing:border-box;margin:0;padding:0;}
-    body{font-family:'Segoe UI',Arial,sans-serif;background:#F7F8FA;color:#1A1A2E;}
-    header{background:linear-gradient(135deg,#1A1A2E 0%,#16213E 60%,#0F3460 100%);
-            color:#fff;padding:28px 40px;}
-    header h1{font-size:24px;font-weight:700;margin-bottom:6px;}
-    header p{font-size:13px;opacity:.75;max-width:700px;}
-    .kpi-bar{display:flex;gap:14px;padding:20px 40px;flex-wrap:wrap;
-              background:#fff;border-bottom:1px solid #E5E7EB;align-items:center;}
-    .kpi{background:#F7F8FA;border:1px solid #E5E7EB;border-radius:10px;
-          padding:14px 22px;min-width:130px;}
-    .kpi-label{font-size:11px;color:#6B7280;text-transform:uppercase;
-                letter-spacing:.06em;margin-bottom:4px;}
-    .kpi-value{font-size:22px;font-weight:700;color:#1A1A2E;}
-    .filter-badge{background:#0F3460;color:#fff;border-radius:20px;
-                   padding:8px 16px;font-size:13px;display:none;
-                   align-items:center;gap:8px;margin-left:auto;}
-    .filter-badge .reset{cursor:pointer;font-weight:700;font-size:16px;
-                          opacity:.7;transition:opacity .2s;}
-    .filter-badge .reset:hover{opacity:1;}
-    .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:20px;
-             padding:20px 40px;}
-    .grid-1{padding:20px 40px;}
-    .card{background:#fff;border-radius:12px;box-shadow:0 1px 4px rgba(0,0,0,.07);
-           padding:10px;overflow:hidden;min-height:200px;}
-    .section-title{font-size:13px;font-weight:600;letter-spacing:.06em;
-                    text-transform:uppercase;color:#6B7280;
-                    padding:0 40px;margin:10px 0 2px;}
-    .error-box{background:#FEE2E2;border:1px solid #FCA5A5;border-radius:8px;
-                padding:20px;margin:20px 40px;color:#991B1B;}
-    .loading{text-align:center;padding:60px;color:#9CA3AF;font-size:14px;}
-    footer{text-align:center;padding:20px;font-size:12px;color:#9CA3AF;}
+    body {
+      background: linear-gradient(180deg, #f8fafc 0%, #eef4ff 100%);
+      color: #1f2937;
+    }
+    .card {
+      border: 1px solid #e2e8f0;
+      border-radius: 16px;
+      box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+      background: white;
+    }
+    .kpi-card {
+      border-radius: 16px;
+      border: 1px solid #dbeafe;
+      background: linear-gradient(135deg, #ffffff 0%, #eff6ff 100%);
+      box-shadow: 0 6px 18px rgba(59, 130, 246, 0.08);
+    }
+    .chart-box img {
+      display: block;
+      width: 100%;
+      height: auto;
+      border-radius: 12px;
+    }
+    .filter-form select {
+      min-width: 180px;
+    }
   </style>
 </head>
 <body>
+  <div class="container-fluid px-4 py-5">
+    <header class="rounded-4 mb-4 p-4 text-white" style="background: linear-gradient(135deg, #0f172a 0%, #1d4ed8 100%);">
+      <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3">
+        <div>
+          <p class="text-uppercase text-blue-200 mb-1 small fw-semibold">Django + Pandas + Matplotlib + Seaborn</p>
+          <h1 class="display-6 fw-bold mb-0">E-Commerce Customer Behavior Analyzer</h1>
+        </div>
+        <div class="text-light small text-lg-end">
+          10,000 transactions · 20 Indian states · Customer segmentation
+        </div>
+      </div>
+    </header>
 
-<header>
-  <h1>E-Commerce Sales Intelligence Dashboard</h1>
-  <p>Django + SQLite + Plotly &nbsp;|&nbsp; 10,000 orders &middot; 2021-2023 &middot; 20 Indian states</p>
-</header>
+    {% if error %}
+      <div class="alert alert-warning mx-auto" role="alert">
+        <strong>Data not available:</strong> {{ error }}
+      </div>
+    {% else %}
+      <form method="get" class="filter-form card p-4 mb-4">
+        <div class="row g-3 align-items-end">
+          <div class="col-md-3">
+            <label for="state" class="form-label fw-semibold">State</label>
+            <select id="state" name="state" class="form-select">
+              <option value="">All States</option>
+              {% for state in states %}
+                <option value="{{ state }}" {% if state == selected_state %}selected{% endif %}>{{ state }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="col-md-3">
+            <label for="category" class="form-label fw-semibold">Category</label>
+            <select id="category" name="category" class="form-select">
+              <option value="">All Categories</option>
+              {% for category in categories %}
+                <option value="{{ category }}" {% if category == selected_category %}selected{% endif %}>{{ category }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="col-md-3">
+            <label for="segment" class="form-label fw-semibold">Customer Segment</label>
+            <select id="segment" name="segment" class="form-select">
+              <option value="">All Segments</option>
+              {% for segment in segments %}
+                <option value="{{ segment }}" {% if segment == selected_segment %}selected{% endif %}>{{ segment }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="col-md-3 text-md-end">
+            <button type="submit" class="btn btn-primary px-4">Apply Filters</button>
+          </div>
+        </div>
+      </form>
 
-{% if error %}
-<div class="error-box">
-  <strong>Error:</strong> {{ error }}
-  <br>Run: <code>python manage.py import_data</code> to load the data first.
-</div>
-{% else %}
+      <div class="row g-4 mb-4">
+        <div class="col-sm-6 col-xl-3">
+          <div class="kpi-card p-4 h-100">
+            <div class="text-muted small text-uppercase fw-semibold">Total Sales</div>
+            <div class="fs-3 fw-bold mt-2">{{ kpi_sales }}</div>
+          </div>
+        </div>
+        <div class="col-sm-6 col-xl-3">
+          <div class="kpi-card p-4 h-100">
+            <div class="text-muted small text-uppercase fw-semibold">Total Orders</div>
+            <div class="fs-3 fw-bold mt-2">{{ kpi_orders }}</div>
+          </div>
+        </div>
+        <div class="col-sm-6 col-xl-3">
+          <div class="kpi-card p-4 h-100">
+            <div class="text-muted small text-uppercase fw-semibold">Total Customers</div>
+            <div class="fs-3 fw-bold mt-2">{{ kpi_customers }}</div>
+          </div>
+        </div>
+        <div class="col-sm-6 col-xl-3">
+          <div class="kpi-card p-4 h-100">
+            <div class="text-muted small text-uppercase fw-semibold">Average Order Value</div>
+            <div class="fs-3 fw-bold mt-2">{{ kpi_aov }}</div>
+          </div>
+        </div>
+      </div>
 
-<div class="kpi-bar">
-  <div class="kpi"><div class="kpi-label">Total Revenue</div>
-    <div class="kpi-value" id="kpi-revenue">{{ kpi_revenue }}</div></div>
-  <div class="kpi"><div class="kpi-label">Total Profit</div>
-    <div class="kpi-value" id="kpi-profit">{{ kpi_profit }}</div></div>
-  <div class="kpi"><div class="kpi-label">Total Orders</div>
-    <div class="kpi-value" id="kpi-orders">{{ kpi_orders }}</div></div>
-  <div class="kpi"><div class="kpi-label">Unique Customers</div>
-    <div class="kpi-value" id="kpi-customers">{{ kpi_customers }}</div></div>
-  <div class="kpi"><div class="kpi-label">Profit Margin</div>
-    <div class="kpi-value" id="kpi-margin">{{ kpi_margin }}</div></div>
-  <div class="filter-badge" id="filterBadge">
-    Showing: <span id="selectedState"></span>
-    <span class="reset" onclick="resetFilter()">&times;</span>
+      <div class="row g-4">
+        <div class="col-lg-6">
+          <div class="card p-3 chart-box">
+            <h5 class="mb-3 fw-bold">Sales by Category</h5>
+            {{ fig_category|safe }}
+          </div>
+        </div>
+        <div class="col-lg-6">
+          <div class="card p-3 chart-box">
+            <h5 class="mb-3 fw-bold">State-wise Sales</h5>
+            {{ fig_state_heatmap|safe }}
+          </div>
+        </div>
+
+        <div class="col-lg-6">
+          <div class="card p-3 chart-box">
+            <h5 class="mb-3 fw-bold">Monthly Sales Trend</h5>
+            {{ fig_trend|safe }}
+          </div>
+        </div>
+        <div class="col-lg-6">
+          <div class="card p-3 chart-box">
+            <h5 class="mb-3 fw-bold">Customer Spending Distribution</h5>
+            {{ fig_customer_spend|safe }}
+          </div>
+        </div>
+
+        <div class="col-lg-6">
+          <div class="card p-3 chart-box">
+            <h5 class="mb-3 fw-bold">Discount vs Profit</h5>
+            {{ fig_discount|safe }}
+          </div>
+        </div>
+        <div class="col-lg-6">
+          <div class="card p-3 chart-box">
+            <h5 class="mb-3 fw-bold">Regional Sales</h5>
+            {{ fig_region|safe }}
+          </div>
+        </div>
+
+        <div class="col-lg-6">
+          <div class="card p-3 chart-box">
+            <h5 class="mb-3 fw-bold">Customer Segment Distribution</h5>
+            {{ fig_customer_dist|safe }}
+          </div>
+        </div>
+        <div class="col-lg-6">
+          <div class="card p-3 chart-box">
+            <h5 class="mb-3 fw-bold">RFM Segment Heatmap</h5>
+            {{ fig_rfm_heat|safe }}
+          </div>
+        </div>
+
+        <div class="col-lg-6">
+          <div class="card p-3 chart-box">
+            <h5 class="mb-3 fw-bold">Profit by Sub-Category</h5>
+            {{ fig_profit|safe }}
+          </div>
+        </div>
+      </div>
+    {% endif %}
   </div>
-</div>
-
-<div class="section-title">State Revenue &amp; Hierarchy</div>
-<div class="grid-2">
-  <div class="card" id="bar-card">{{ fig_bar|safe }}</div>
-  <div class="card" id="sunburst-card">{{ fig_sun|safe }}</div>
-</div>
-
-<div class="section-title">Revenue Trends</div>
-<div class="grid-1">
-  <div class="card" id="anim-card">{{ fig_anim|safe }}</div>
-</div>
-
-<div class="section-title">Product Performance</div>
-<div class="grid-2">
-  <div class="card" id="bubble-card">{{ fig_bubble|safe }}</div>
-  <div class="card" id="rfm-card">{{ fig_rfm|safe }}</div>
-</div>
-
-
-<div class="section-title">Distribution &amp; Regional Analysis</div>
-<div class="grid-2">
-  <div class="card" id="category-card">{{ fig_category|safe }}</div>
-  <div class="card" id="region-card">{{ fig_region|safe }}</div>
-</div>
-
-<div class="section-title">Profitability Analysis</div>
-<div class="grid-2">
-  <div class="card" id="profit-card">{{ fig_profit|safe }}</div>
-  <div class="card" id="discount-card">{{ fig_discount|safe }}</div>
-</div>
-
-<div class="section-title">Trends &amp; Patterns</div>
-<div class="grid-1">
-  <div class="card" id="trend-card">{{ fig_trend|safe }}</div>
-</div>
-
-<div class="section-title">State-wise Performance</div>
-<div class="grid-1">
-  <div class="card" id="heatmap-card">{{ fig_heatmap|safe }}</div>
-</div>
-
-<div class="section-title">Product Performance Matrix</div>
-<div class="grid-1">
-  <div class="card" id="product-card">{{ fig_product|safe }}</div>
-</div>
-
-{% if fig_rfm_heat %}
-<div class="section-title">Customer Segment Analysis</div>
-<div class="grid-2">
-  <div class="card" id="rfm-heat-card">{{ fig_rfm_heat|safe }}</div>
-  <div class="card" id="customer-dist-card">{{ fig_customer_dist|safe }}</div>
-</div>
-{% endif %}
-
-{% endif %}
-
-<footer>
-  Built with Django &middot; SQLite &middot; Pandas &middot; NumPy &middot; Matplotlib &middot; Seaborn &middot; Plotly
-</footer>
-
-<script>
-let currentState = "";
-
-function setHTML(container, html) {
-  container.innerHTML = html;
-  container.querySelectorAll("script").forEach(function(old) {
-    var s = document.createElement("script");
-    s.textContent = old.textContent;
-    old.parentNode.replaceChild(s, old);
-  });
-}
-
-var barGd = document.querySelector("#bar-card .plotly-graph-div");
-if (barGd) {
-  barGd.on("plotly_click", function(event) {
-    if (!event.points || event.points.length === 0) return;
-    var pt = event.points[0];
-    if (!pt.y || !pt.x || pt.x <= 0) return;
-    filterByState(pt.y);
-  });
-}
-
-function filterByState(state) {
-  currentState = state;
-  document.getElementById("selectedState").textContent = state;
-  document.getElementById("filterBadge").style.display = "flex";
-
-  var cards = ["sunburst-card", "anim-card", "bubble-card", "dd-card"];
-  cards.forEach(function(id) {
-    document.getElementById(id).innerHTML = '<div class="loading">Loading...</div>';
-  });
-
-  fetch("/state/" + encodeURIComponent(state) + "/")
-    .then(function(r) { return r.json(); })
-    .then(function(data) {
-      if (data.error) return;
-    setHTML(document.getElementById("sunburst-card"), data.fig_sun);
-      setHTML(document.getElementById("anim-card"), data.fig_anim);
-      setHTML(document.getElementById("bubble-card"), data.fig_bubble);
-      setHTML(document.getElementById("dd-card"), data.fig_dd);
-      // Update matplotlib charts if present
-      if (data.fig_category) setHTML(document.getElementById("category-card"), data.fig_category);
-      if (data.fig_region) setHTML(document.getElementById("region-card"), data.fig_region);
-      if (data.fig_profit) setHTML(document.getElementById("profit-card"), data.fig_profit);
-      if (data.fig_discount) setHTML(document.getElementById("discount-card"), data.fig_discount);
-      if (data.fig_trend) setHTML(document.getElementById("trend-card"), data.fig_trend);
-      if (data.fig_heatmap) setHTML(document.getElementById("heatmap-card"), data.fig_heatmap);
-      if (data.fig_product) setHTML(document.getElementById("product-card"), data.fig_product);
-      if (data.fig_rfm_heat) setHTML(document.getElementById("rfm-heat-card"), data.fig_rfm_heat);
-      if (data.fig_customer_dist) setHTML(document.getElementById("customer-dist-card"), data.fig_customer_dist);
-      document.getElementById("kpi-revenue").textContent = data.kpi_revenue;
-      document.getElementById("kpi-profit").textContent = data.kpi_profit;
-      document.getElementById("kpi-orders").textContent = data.kpi_orders;
-      document.getElementById("kpi-margin").textContent = data.kpi_margin;
-    });
-}
-
-function resetFilter() {
-  currentState = "";
-  document.getElementById("filterBadge").style.display = "none";
-  location.reload();
-}
-</script>
 </body>
 </html>
+

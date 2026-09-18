@@ -1,26 +1,86 @@
-# E-Commerce Sales Intelligence Dashboard
+# E-Commerce Customer Behavior Analyzer
 
-An interactive data analytics dashboard built with Django and Plotly that visualises 10,000 e-commerce transactions across 20 Indian states. Features cross-filtering by state, RFM customer segmentation, and six interactive chart types — all served without external CDN dependencies.
+A Django-based analytics project that studies e-commerce transaction data to understand sales performance, customer buying behavior, and customer segmentation using Pandas, NumPy, Matplotlib, and Seaborn.
 
 ## Features
 
-- **6 Interactive Charts**: State revenue lollipop, revenue hierarchy sunburst, animated monthly bar race, sub-category bubble chart, RFM segment scatter, and segment drill-down with dropdown
-- **State Filter**: Click any state in the lollipop chart to filter KPIs, sunburst, trend, bubble, and drill-down charts to that state
-- **RFM Segmentation**: Automatic customer segmentation (Champion, Loyal, At Risk, Lost, etc.) computed from transaction history
-- **No External Dependencies**: Plotly.js served locally — no CDN requests at runtime
-- **Responsive Layout**: Two-column grid adapts to different screen sizes
+- Sales analysis across categories, regions, and states
+- Customer spending and purchase-pattern insights
+- RFM segmentation for customer behavior analysis
+- Filtered dashboard using state, category, and segment options
+- Clean beginner-friendly dashboard with KPI cards and static charts
+- Django admin support for records and segment data
 
 ## Tech Stack
 
-| Component | Technology |
-|-----------|------------|
-| Backend | Django 6 (Python) |
-| Database | SQLite (Django ORM) |
-| Data processing | Pandas, NumPy |
-| Visualisation | Plotly.js (self-hosted) |
-| Frontend | Vanilla JavaScript |
+- Backend: Django
+- Database: SQLite
+- Data processing: Pandas, NumPy
+- Visualization: Matplotlib, Seaborn
+- Frontend: HTML, CSS, Bootstrap, Tailwind CSS
 
-## Quick Start
+## Project Workflow
+
+1. Raw e-commerce data is loaded from the CSV file.
+2. Django imports the data into the SQLite database.
+3. Pandas and NumPy clean and analyze the sales data.
+4. RFM values are calculated for each customer.
+5. Matplotlib and Seaborn generate charts.
+6. The Django template displays the dashboard and KPI cards.
+
+## RFM Segmentation
+
+RFM stands for Recency, Frequency, and Monetary value.
+
+- Recency: how recently the customer purchased
+- Frequency: how often the customer shops
+- Monetary: how much the customer spends
+
+The project classifies customers into segments such as Champion, Loyal, At Risk, Need Attention, and Lost.
+
+## Visualizations
+
+- Sales by category
+- State-wise sales heatmap
+- Monthly sales trend
+- Discount vs profit scatter plot
+- Regional sales comparison
+- Customer spending distribution
+- Customer segment distribution
+- RFM heatmap
+
+## Project Structure
+
+```bash
+analytics/
+├── analysis/
+│   └── matplotlib_charts.py
+├── management/
+│   └── commands/
+│       ├── import_data.py
+│       └── compute_rfm.py
+├── migrations/
+├── templates/
+│   └── analytics/
+│       └── dashboard.html
+├── models.py
+├── views.py
+├── urls.py
+├── admin.py
+├── apps.py
+├── tests.py
+├── data/
+│   └── ecommerce.csv
+dashboard_config/
+├── settings.py
+├── urls.py
+README.md
+requirements.txt
+manage.py
+db.sqlite3
+```
+
+## Installation
 
 ```bash
 python -m venv .venv
@@ -28,73 +88,34 @@ source .venv/bin/activate
 pip install -r requirements.txt
 python manage.py migrate
 python manage.py import_data
-python manage.py runserver 0.0.0.0:8080
+python manage.py compute_rfm
 ```
 
-Open http://localhost:8080 in your browser.
-
-### Django Admin
-
-Access the admin interface at **http://localhost:8080/admin/** to manage orders, customers, and RFM segments.
+## How to Run
 
 ```bash
-# Create a superuser (admin) account
+python manage.py runserver
+```
+
+Open http://localhost:8000 in the browser.
+
+## Django Admin
+
+Create an admin user:
+
+```bash
 python manage.py createsuperuser
-
-# Or reset an existing admin password
-python manage.py changepassword admin
 ```
 
-You'll be prompted for a username, email, and password. After logging in at `/admin/`, you can browse and edit `Customer`, `Order`, and `RfmSegment` records through Django's built-in admin UI.
+Then open http://localhost:8000/admin/ to manage the database records.
 
-## Documentation
+## Future Enhancements
 
-- [Setup Guide](docs/setup.md) — detailed installation and configuration
-- [Architecture](docs/architecture.md) — system design, data flow, and component details
-
-## Project Structure
-
-```
-├── analytics/                  # Django application
-│   ├── analysis/               # Plotly chart builders
-│   ├── data/                   # Sample CSV data
-│   ├── management/commands/    # import_data, compute_rfm
-│   ├── static/analytics/       # Plotly.js library
-│   ├── templates/analytics/    # Dashboard HTML template
-│   ├── models.py               # Order, Customer, RfmSegment
-│   └── views.py                # Dashboard and API views
-├── dashboard_config/           # Django project settings
-├── docs/                       # Documentation
-├── db.sqlite3                  # SQLite database
-├── manage.py
-└── requirements.txt
-```
-
-## Charts
-
-### Plotly Interactive Charts
-| Chart | Description | Filterable |
-|-------|-------------|------------|
-| State Revenue | Horizontal lollipop chart — states ranked by revenue | Click to filter |
-| Revenue Hierarchy | Sunburst — category → sub-category → region | — |
-| Revenue Trend | Animated bar chart — month-by-month cumulative revenue | Yes |
-| Product Performance | Bubble chart — sub-category revenue vs profit | Yes |
-| RFM Segments | Scatter — customer recency vs frequency | — |
-| Segment Drill-Down | Stacked bar with segment selector dropdown | Yes |
-
-### Matplotlib & Seaborn Charts
-| Chart | Description |
-|-------|-------------|
-| Category Distribution | Pie chart showing sales breakdown by category |
-| State-wise Heatmap | Monthly sales heatmap across top 15 states |
-| Profit by Sub-Category | Horizontal bar chart highlighting profitable vs unprofitable sub-categories |
-| Sales by Region | Bar chart comparing total sales across regions |
-| Discount Impact | Scatter plot showing correlation between discount and profit |
-| RFM Segment Heatmap | Heatmap of average R, F, M scores by customer segment |
-| Monthly Trend | Dual-axis line chart showing sales & profit trends over time |
-| Product Performance Matrix | Bubble chart with orders count, revenue, and profit margins |
-| Customer Segment Distribution | Bar chart showing customer count distribution across RFM segments |
+- Add more date-based filters
+- Add category and state trend comparisons
+- Improve dashboard styling for presentations
+- Add downloadable CSV or PDF reports
 
 ## License
 
-This project is licensed under the MIT License.
+This project is for learning and interview preparation and can be adapted for personal projects or academic use.
