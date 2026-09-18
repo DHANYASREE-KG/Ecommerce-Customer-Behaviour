@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: ecommerce-customer-behaviour
+    runtime: python
+    plan: free
+    buildCommand: bash build.sh
+    startCommand: gunicorn dashboard_config.wsgi:application
+    envVars:
+      - key: SECRET_KEY
+        generateValue: true
+      - key: PYTHON_VERSION
+        value: 3.12.8
